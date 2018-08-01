@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 func main() {
@@ -23,23 +24,24 @@ func mainInner() error {
 	if err != nil {
 		return fmt.Errorf("compiling filter as regex: %v", err)
 	}
-	var latch string
+	var latch *string
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
-		groups := re.FindStringSubmatch(line)
-		var cap string
-		if groups != nil {
-			if len(groups) != 2 {
-				return fmt.Errorf("filter must have exactly one capture group but had %v", len(groups)-1)
+		if latch == nil {
+			groups := re.FindStringSubmatch(line)
+			if groups != nil {
+				if len(groups) != 2 {
+					return fmt.Errorf("filter must have exactly one capture group but had %v", len(groups)-1)
+				}
+				latch = &groups[1]
+				fmt.Printf("latched onto '%v'\n", *latch)
 			}
-			cap = groups[1]
 		}
-		if latch == "" && cap != "" {
-			latch = cap
-		}
-		if cap != "" && latch == cap {
-			fmt.Println(scanner.Text())
+		if latch != nil {
+			if strings.Contains(line, *latch) {
+				fmt.Println(scanner.Text())
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
